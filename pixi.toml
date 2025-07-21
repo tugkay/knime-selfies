@@ -6,8 +6,10 @@ platforms = ["win-64", "linux-64", "osx-64", "osx-arm64"]
 
 [dependencies]
 python = "3.11.*"
-knime-extension = "*"
-knime-python-base = "*"
+knime-extension = "5.5.*"
+knime-python-base = "5.5.*"
+knime-python-scripting = "5.5.*"
+rdkit = "*"
 
 [feature.build.dependencies]
 python = "3.9.*"
