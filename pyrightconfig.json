@@ -1,0 +1,10 @@
+{
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "extraPaths": [
+        "C:/Users/knime_nightly/knime_5.5.0/plugins/org.knime.chem.types_5.5.0.v202506230959/python/src/org"
+      ]
+    }
+  ]
+}
