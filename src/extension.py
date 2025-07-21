@@ -40,7 +40,7 @@ class CountNumCarbons:
         LOGGER.warning(f"DEBUG: Input schema : {dir(input_schema_1)}")
         for col in input_schema_1._columns:
             LOGGER.warning(f"Column: {col.name}, Type: {col.ktype}")   # Debugging line to check input types
-        return input_schema_1.append(knext.Column(knext.int32(), "NumCarbons"))
+        return input_schema_1.append(knext.Column(knext.int64(), "NumCarbons"))
 
 
     def execute(self, exec_context, input_1):
