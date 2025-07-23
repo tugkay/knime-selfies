@@ -1,8 +1,6 @@
 import logging
 import knime.extension as knext
-import knime.types.chemistry as ktchem
 from knime.types.chemistry import to_rdkit_series, is_molecule
-import knime.api.types as ktypes
 from rdkit import Chem
 
 LOGGER = logging.getLogger(__name__)   
@@ -14,16 +12,17 @@ class RDKitObject:
     """
     This node returns the RDKit molecule in an appended column.
     """
+    # Note: is_molecule is used to filter columns that contain any usable molecule type.
     molecule_column = knext.ColumnParameter(label="Select the column containing any mol type", description="Choose the column from the input table containing the mol type", column_filter=is_molecule)
 
     def configure(self, configure_context, input_schema_1):
-        return input_schema_1.append(knext.Column(knext.logical(Chem.Mol), "RDKitMol"))
+        return input_schema_1.append(knext.Column(knext.logical(Chem.Mol), "RDKitMol")) # RDKitMol is a type that is known to KNIME and can be used in the output table.
  
  
     def execute(self, exec_context, input_1):    
         input_1_pandas = input_1.to_pandas()
-        #input_1_pandas['RDKitMol'] = input_1_pandas[self.molecule_column].astype("Molecule")
-        input_1_pandas['RDKitMol'] = to_rdkit_series(input_1_pandas[self.molecule_column])
+        #input_1_pandas['RDKitMol'] = input_1_pandas[self.molecule_column].astype("Molecule")  # This is unfortunately not yet supported in KNIME python extensions (2025-07-23)
+        input_1_pandas['RDKitMol'] = to_rdkit_series(input_1_pandas[self.molecule_column]) # Note: We can convert any molecule type to RDKitMol using this function. And simply add the new column to the DataFrame.
         return knext.Table.from_pandas(input_1_pandas)
     
 
@@ -33,6 +32,11 @@ class RDKitObject:
 class CountNumCarbons:
     """
     This node counts the number of carbons in each RDKit molecule and appends it as a new column.
+
+    The provided KNIME workflow demonstrates how to use this node:
+        - directly from a SMILES column
+        - from a column containing Java RDKit molecules
+        - from another python node that outputs RDKit molecules
     """
     molecule_column = knext.ColumnParameter(label="Select the column containing RDKit molecules", description="Choose the column from the input table containing RDKit molecules", column_filter=is_molecule)
     
@@ -45,6 +49,6 @@ class CountNumCarbons:
 
     def execute(self, exec_context, input_1):
         df = input_1.to_pandas()
-        mol_col = to_rdkit_series(df[self.molecule_column])
+        mol_col = to_rdkit_series(df[self.molecule_column], sanitize=True)
         df['NumCarbons'] = mol_col.apply(lambda mol: sum(1 for atom in mol.GetAtoms() if atom.GetAtomicNum() == 6))
         return knext.Table.from_pandas(df)
