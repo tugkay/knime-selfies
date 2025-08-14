@@ -354,33 +354,43 @@ def _to_rdkit_scalar(val, **kwargs) -> 'Chem.Mol':
     """
     try:
         from rdkit import Chem
-        from rdkit.Chem import rdSLNParse
     except ImportError:
         raise ImportError("RDKit is not installed. Please install it to use chemistry types in python.")
     
 
     _STRING_TO_MOL = {
-    #CMLAdapterValue:       Not supported 2025-07-17,
-    #CMLValue:             Not supported 2025-07-17,
-    CtabValue:            Chem.MolFromMolBlock,
-    HELMAdapterValue:      Chem.MolFromHELM,
-    HELMValue:            Chem.MolFromHELM,
-    InchiAdapterValue:     Chem.MolFromInchi,
-    InchiValue:           Chem.MolFromInchi,
-    MolAdapterValue:       Chem.MolFromMolBlock,
-    MolValue:             Chem.MolFromMolBlock,
-    Mol2AdapterValue:   Chem.MolFromMol2Block,
-    Mol2Value:          Chem.MolFromMol2Block,
-    #RxnAdapterValue:      Not supported 2025-07-17. Can contain molecules, but intended for reactions.
-    #RxnValue:            Not supported 2025-07-17. Can contain molecules, but intended for reactions.
-    SdfAdapterValue:      Chem.MolFromMolBlock,
-    SdfValue:            Chem.MolFromMolBlock,
-    SlnValue:            rdSLNParse.MolFromSLN,
-    SmartsAdapterValue:   Chem.MolFromSmarts,
-    SmartsValue:         Chem.MolFromSmarts,
-    SmilesAdapterValue:   Chem.MolFromSmiles,
-    SmilesValue:       Chem.MolFromSmiles,
+        # CMLAdapterValue:       Not supported 2025-07-17,
+        # CMLValue:             Not supported 2025-07-17,
+        CtabValue: Chem.MolFromMolBlock,
+        HELMAdapterValue: Chem.MolFromHELM,
+        HELMValue: Chem.MolFromHELM,
+        InchiAdapterValue: Chem.MolFromInchi,
+        InchiValue: Chem.MolFromInchi,
+        MolAdapterValue: Chem.MolFromMolBlock,
+        MolValue: Chem.MolFromMolBlock,
+        Mol2AdapterValue: Chem.MolFromMol2Block,
+        Mol2Value: Chem.MolFromMol2Block,
+        # RxnAdapterValue:      Not supported 2025-07-17. Can contain molecules, but intended for reactions.
+        # RxnValue:            Not supported 2025-07-17. Can contain molecules, but intended for reactions.
+        SdfAdapterValue: Chem.MolFromMolBlock,
+        SdfValue: Chem.MolFromMolBlock,
+        SmartsAdapterValue: Chem.MolFromSmarts,
+        SmartsValue: Chem.MolFromSmarts,
+        SmilesAdapterValue: Chem.MolFromSmiles,
+        SmilesValue: Chem.MolFromSmiles,
     }
+
+    # Add SLN support if available
+    try:
+        from rdkit.Chem import rdSLNParse
+
+        _STRING_TO_MOL[SlnValue] = rdSLNParse.MolFromSLN
+    except ImportError:
+        import logging
+
+        logging.warning(
+            "Could not import SLN parser from RDKit, support for SLN missing"
+        )
 
     if val is None:
         return None
