@@ -373,7 +373,7 @@
     <extension
         point="org.knime.python3.types.PythonValueFactory">
         <Module
-            modulePath="" moduleName="knime.types.chemistry">
+            modulePath="python/src/org" moduleName="knime.types.chemistry">
             <PythonValueFactory
                 PythonClassName="CDXMLValueFactory"
                 ValueFactory="org.knime.chem.types.cdx.CDXMLCellValueFactory"
