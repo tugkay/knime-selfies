@@ -3,7 +3,7 @@ channels = ["knime/label/nightly", "knime", "conda-forge"]
 platforms = ["win-64", "linux-64", "osx-64", "osx-arm64"]
 
 [tasks]
-pytest = { cmd = "pytest" }
+test = { cmd = "pytest" }
 
 [dependencies]
 python = "3.11.*"
