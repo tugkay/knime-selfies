@@ -12,6 +12,7 @@ knime-python-base = "5.6.*"
 knime-python-scripting = "5.6.*"
 rdkit = "*"
 pytest = "*"
+ipykernel = "*"
 
 [feature.build.dependencies]
 python = "3.9.*"

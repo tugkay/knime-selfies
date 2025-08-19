@@ -299,66 +299,18 @@ class SmilesValueFactory(StringBasedValueFactory):
 # RDKit Mol objects, and a custom accessor for pandas Series to facilitate this conversion.
 # It also defines a function to check if a column contains any supported chemistry type.
 ###########################################################################
-import knime.extension as knext
+
 import functools
 
-_MOLECULE_VALUE_CLASSES = (
-    #CMLAdapterValue,
-    #CMLValue,
-    CtabValue,
-    HELMAdapterValue,
-    HELMValue,
-    InchiAdapterValue,
-    InchiValue,
-    MolAdapterValue,
-    MolValue,
-    Mol2AdapterValue,
-    Mol2Value,
-    #RxnAdapterValue,
-    #RxnValue,
-    SdfAdapterValue,
-    SdfValue,
-    SlnValue,
-    SmartsAdapterValue,
-    SmartsValue,
-    SmilesAdapterValue,
-    SmilesValue,
-)
-
 @functools.lru_cache(maxsize=1)
-def get_molecule_ktypes():
-    return {knext.logical(cls) for cls in _MOLECULE_VALUE_CLASSES}
-
-def is_molecule(col: knext.Column) -> bool:
-    """True if the column holds any supported chemistry value."""
-    if col.ktype in get_molecule_ktypes():
-        return True
-    try:
-        from rdkit import Chem
-        if col.ktype in [Chem.Mol, Chem.RWMol, Chem.rdchem.Mol, knext.logical(Chem.Mol)]:
-            return True
-    except ImportError:
-        raise ImportError("RDKit is not installed. Please install it to use chemistry types in python.")
-    return False
-
-
-def _to_rdkit_scalar(val, **kwargs) -> 'Chem.Mol':
-    """Convert a KNIME chemistry type to an RDKit Mol object.
-    Args:
-        val: A KNIME chemistry type value (e.g., CtabValue, InchiValue, SmilesValue, etc.).
-        **kwargs: Additional keyword arguments to pass to the RDKit conversion functions.
-    Returns:
-        Chem.Mol: An RDKit Mol object.
-    Raises:
-        TypeError: If the value is not a supported chemistry type.
-    """
+def get_knime_to_rdkit_mol():
+    """Build and cache the mapping from KNIME chemistry types to RDKit converter functions."""
     try:
         from rdkit import Chem
     except ImportError:
         raise ImportError("RDKit is not installed. Please install it to use chemistry types in python.")
-    
 
-    _STRING_TO_MOL = {
+    mapping = {
         # CMLAdapterValue:       Not supported 2025-07-17,
         # CMLValue:             Not supported 2025-07-17,
         CtabValue: Chem.MolFromMolBlock,
@@ -371,34 +323,53 @@ def _to_rdkit_scalar(val, **kwargs) -> 'Chem.Mol':
         Mol2AdapterValue: Chem.MolFromMol2Block,
         Mol2Value: Chem.MolFromMol2Block,
         # RxnAdapterValue:      Not supported 2025-07-17. Can contain molecules, but intended for reactions.
-        # RxnValue:            Not supported 2025-07-17. Can contain molecules, but intended for reactions.
+        # RxnValue:             Not supported 2025-07-17. Can contain molecules, but intended for reactions.
         SdfAdapterValue: Chem.MolFromMolBlock,
         SdfValue: Chem.MolFromMolBlock,
         SmartsAdapterValue: Chem.MolFromSmarts,
         SmartsValue: Chem.MolFromSmarts,
         SmilesAdapterValue: Chem.MolFromSmiles,
         SmilesValue: Chem.MolFromSmiles,
+        Chem.Mol: lambda x, **kwargs: x,  # RDKit Mol passthrough; accept/ignore kwargs
     }
-
-    # Add SLN support if available
+    # Add SLN support if available -> is not part of the rdkit build on Mac
     try:
         from rdkit.Chem import rdSLNParse
-
-        _STRING_TO_MOL[SlnValue] = rdSLNParse.MolFromSLN
+        mapping[SlnValue] = rdSLNParse.MolFromSLN
     except ImportError:
         import logging
+        logging.warning("Could not import SLN parser from RDKit, support for SLN missing")
 
-        logging.warning(
-            "Could not import SLN parser from RDKit, support for SLN missing"
-        )
+    return mapping
 
+@functools.lru_cache(maxsize=1)
+def get_molecule_ktypes():
+    """Build and cache the set of KNIME logical types for supported molecule values."""
+    import knime.extension as knext
+    mapping = get_knime_to_rdkit_mol()
+    return set(knext.logical(cls) for cls in mapping.keys())
+
+def is_molecule(col: 'knext.Column') -> bool:
+    """True if the column holds any supported chemistry value. Example: SDF, Inchi, Smiles, etc."""
+    return col.ktype in get_molecule_ktypes()
+
+def _to_rdkit_scalar(val, **kwargs) -> 'Chem.Mol':
+    """Convert a KNIME chemistry type to an RDKit Mol object.
+    Args:
+        val: A KNIME chemistry type value (e.g., SDF, Inchi, Smiles, etc.) or an RDKit Mol.
+        **kwargs: Additional keyword arguments to pass to the RDKit conversion functions.
+    Returns:
+        Chem.Mol: An RDKit Mol object.
+    Raises:
+        TypeError: If the value is not a supported chemistry type.
+    """
     if val is None:
         return None
-    if isinstance(val, Chem.Mol):
-        return val
-    fn = _STRING_TO_MOL.get(type(val))
+    fn = get_knime_to_rdkit_mol().get(type(val))
     if fn is not None:
-        return fn(str(val), **kwargs)
+        # Only coerce to str for string-based KNIME values; pass RDKit Mol through unchanged
+        arg = str(val) if isinstance(val, str) else val
+        return fn(arg, **kwargs)
     raise TypeError(f"Unsupported molecule value {val!r} of type {type(val)}")
 
 def to_rdkit_series(s: 'pd.Series', **kwargs) -> 'pd.Series':
@@ -424,3 +395,14 @@ def to_rdkit_series(s: 'pd.Series', **kwargs) -> 'pd.Series':
         pd.Series: A pandas Series containing RDKit Mol objects.
     """ 
     return s.map(lambda x: _to_rdkit_scalar(x, **kwargs))
+
+def to_rdkit_iter(s: 'pd.Series', **kwargs) -> 'Iterator[Chem.Mol]':
+    """Yield RDKit Mol objects converted from a pandas Series of KNIME chemistry types.
+    This function is a generator that yields RDKit Mol objects one by one.
+
+    Args:
+        s (pd.Series): A pandas Series containing KNIME chemistry types.
+
+    """
+    for x in s:
+        yield _to_rdkit_scalar(x, **kwargs)
