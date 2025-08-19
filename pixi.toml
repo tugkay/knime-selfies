@@ -3,6 +3,7 @@ channels = ["knime/label/nightly", "knime", "conda-forge"]
 platforms = ["win-64", "linux-64", "osx-64", "osx-arm64"]
 
 [tasks]
+test = { cmd = "pytest" }
 
 [dependencies]
 python = "3.11.*"
@@ -10,6 +11,8 @@ knime-extension = "5.6.*"
 knime-python-base = "5.6.*"
 knime-python-scripting = "5.6.*"
 rdkit = "*"
+pytest = "*"
+ipykernel = "*"
 
 [feature.build.dependencies]
 python = "3.9.*"
