@@ -4,7 +4,7 @@
 # Extension metadata
 name: selfies_integration  # Will be concatenated with the group_id to an ID
 group_id: org.selfies
-description: Test Project: SELFIES Integration # Human readable bundle name / description
+description: Test Project SELFIES Integration # Human readable bundle name / description
 long_description: This extension is a test project for building one's own KNIME nodes in Python.
 version: 0.1.0 # Version of this Python node extension
 
@@ -16,8 +16,8 @@ license_file: LICENSE.TXT # Best practice: put your LICENSE.TXT next to the knim
 
 # Python settings 
 pixi_toml_path: pixi.toml # This is necessary for bundling, but not needed during development
-# extension_module: ./src/extension # The .py Python module containing the nodes of your extension
-extension_module: extension
+extension_module: ./src/extension # The .py Python module containing the nodes of your extension
+# extension_module: extension
 feature_dependencies:
   - org.knime.features.chem.types
   - org.rdkit.knime.feature
